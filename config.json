@@ -31,6 +31,16 @@
       "team": "Nordic"
     },
     {
+      "name": "Jakub Michalski",
+      "riskonnect_id": "ID_JAKUB_M",
+      "team": "Nordic"
+    },
+    {
+      "name": "Oliwia Zientek",
+      "riskonnect_id": "ID_OLIWIA_Z",
+      "team": "Nordic"
+    },
+    {
       "name": "Razvan Poenaru",
       "riskonnect_id": "005Ts00000J4GhZIAV",
       "team": "Bucharest"
@@ -78,7 +88,7 @@
     {
       "customer": "Jeld-Wen",
       "country": "Sweden",
-      "handler": "Weronika Kruszewska",
+      "handler": "Oliwia Zientek",
       "min_amount": 200
     },
     {
@@ -90,7 +100,7 @@
     {
       "customer": "Spendrups",
       "country": "Sweden",
-      "handler": "Weronika Kruszewska",
+      "handler": "Oliwia Zientek",
       "min_amount": 200
     },
     {
@@ -108,7 +118,7 @@
     {
       "customer": "Postnord",
       "country": "Sweden",
-      "handler": "Amelia Falk",
+      "handler": "Tomasz Wasil",
       "min_amount": 200
     },
     {
@@ -121,13 +131,13 @@
       "customer": "Bestseller",
       "country": "Denmark",
       "handler": "Karolina Rygorowicz",
-      "min_amount": 500
+      "min_amount": 0
     },
     {
       "customer": "Dancover",
       "country": "Denmark",
       "handler": "Karolina Rygorowicz",
-      "min_amount": 500
+      "min_amount": 0
     }
   ],
   "general_rules": [
@@ -143,7 +153,6 @@
       "priority": 10,
       "description": "Low Value <200 (DK,EE,LT,LV,NO,FI)",
       "countries": ["Denmark", "Estonia", "Lithuania", "Latvia", "Norway", "Finland"],
-      "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Total Missing", "Water Damage"],
       "max_amount": 200,
       "handlers": ["Angelic Arellano"],
       "output_team": "CHC Doc Team"
@@ -153,7 +162,6 @@
       "description": "SE Low Value <200",
       "countries": ["Sweden"],
       "divisions": ["Road"],
-      "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Total Missing", "Water Damage"],
       "max_amount": 200,
       "handlers": ["Arianne Dimalanta"],
       "output_team": "CHC Doc Team"
@@ -162,7 +170,6 @@
       "priority": 15,
       "description": "Fast Track 200-500 (DK,EE,LT,LV,NO,FI)",
       "countries": ["Denmark", "Estonia", "Lithuania", "Latvia", "Norway", "Finland"],
-      "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Water Damage"],
       "min_amount": 200,
       "max_amount": 500,
       "output_team": "CHC Bucharest",
@@ -170,76 +177,47 @@
     },
     {
       "priority": 30,
-      "description": "DK Road >500",
+      "description": "DK Road Regular claims",
       "countries": ["Denmark"],
       "divisions": ["Road"],
       "min_amount": 500,
-      "handlers": ["Robert Kaczmarczyk", "Karolina Rygorowicz"]
+      "handlers": ["Robert Kaczmarczyk", "Jakub Michalski", "Tomasz Wasil", "Amelia Falk"]
     },
     {
-      "priority": 40,
-      "description": "SE Manco >=200",
-      "countries": ["Sweden"],
-      "sub_types": ["Partial Missing", "Theft", "Total Missing"],
-      "min_amount": 200,
-      "handlers": ["Amelia Falk", "Michał Sztorc", "Tomasz Wasil"]
-    },
-    {
-      "priority": 40,
-      "description": "SE Damage >=200",
-      "countries": ["Sweden"],
-      "divisions": ["Road", "Contract Logistics"],
-      "sub_types": ["Damage", "Delay", "Errors & Omissions", "General Average", "Hidden Damage", "Temperature Damage", "Truck Accident", "Water Damage"],
-      "min_amount": 200,
-      "handlers": ["Amelia Falk", "Michał Sztorc", "Tomasz Wasil", "Weronika Kruszewska"]
-    },
-    {
-      "priority": 50,
-      "description": "DK Solutions",
+      "priority": 35,
+      "description": "DK Contract Logistic / Solutions",
       "countries": ["Denmark"],
-      "divisions": ["Solutions"],
+      "divisions": ["Contract Logistics", "Solutions"],
       "handlers": ["Karolina Rygorowicz"]
     },
     {
-      "priority": 50,
-      "description": "Norway standard",
+      "priority": 40,
+      "description": "Norway Road Regular",
       "countries": ["Norway"],
-      "handlers": ["Amelia Falk"]
+      "divisions": ["Road"],
+      "handlers": ["Amelia Falk", "Jakub Michalski"]
     },
     {
-      "priority": 50,
-      "description": "EE/LT/LV standard",
-      "countries": ["Estonia", "Lithuania", "Latvia"],
-      "divisions": ["Road", "Solutions", "Contract Logistics"],
-      "sub_types": ["Damage", "Delay", "Errors & Omissions", "General Average", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Total Missing", "Truck Accident", "Water Damage"],
-      "min_amount": 500,
-      "handlers": ["Weronika Kruszewska"]
-    },
-    {
-      "priority": 50,
-      "description": "Finland Road+Solutions",
-      "countries": ["Finland"],
-      "divisions": ["Road", "Solutions"],
-      "sub_types": ["Delay", "Errors & Omissions", "General Average", "Total Missing", "Truck Accident"],
-      "handlers": ["Karolina Rygorowicz"]
-    },
-    {
-      "priority": 50,
-      "description": "SE <200 not low value",
+      "priority": 45,
+      "description": "SE Regular claims >200 EUR (Road/CL/Solutions)",
       "countries": ["Sweden"],
-      "sub_types": ["Delay", "Errors & Omissions", "General Average", "Truck Accident"],
-      "max_amount": 200,
-      "handlers": ["Amelia Falk", "Tomasz Wasil", "Weronika Kruszewska"]
+      "divisions": ["Road", "Contract Logistics", "Solutions"],
+      "min_amount": 200,
+      "handlers": ["Michał Sztorc", "Tomasz Wasil", "Amelia Falk", "Weronika Kruszewska", "Oliwia Zientek"]
     },
     {
       "priority": 50,
-      "description": "Denmark Total Missing 200-500",
-      "countries": ["Denmark"],
-      "divisions": ["Road", "Solutions"],
-      "sub_types": ["Delay", "Errors & Omissions", "General Average", "Total Missing", "Truck Accident"],
-      "min_amount": 200,
-      "max_amount": 500,
-      "handlers": ["Karolina Rygorowicz", "Robert Kaczmarczyk"]
+      "description": "EE/LT/LV Road Regular",
+      "countries": ["Estonia", "Lithuania", "Latvia"],
+      "divisions": ["Road"],
+      "handlers": ["Weronika Kruszewska", "Tomasz Wasil"]
+    },
+    {
+      "priority": 50,
+      "description": "Finland Regular Claims (Road/CL/Solutions)",
+      "countries": ["Finland"],
+      "divisions": ["Road", "Contract Logistics", "Solutions"],
+      "handlers": ["Karolina Rygorowicz", "Robert Kaczmarczyk", "Jakub Michalski", "Weronika Kruszewska", "Oliwia Zientek"]
     }
   ]
 }
