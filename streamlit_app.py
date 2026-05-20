@@ -49,13 +49,16 @@ def safe_float(v):
 # ============================================================================
 
 def load_config():
-    with open('config.json', 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open('config.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"handlers": [], "vip_rules": [], "general_rules": []}
 
 config = load_config()
-HANDLERS = {h['name']: h for h in config['handlers']}
-VIP_RULES = config['vip_rules']
-GENERAL_RULES = sorted(config['general_rules'], key=lambda x: x['priority'])
+HANDLERS = {h['name']: h for h in config.get('handlers', [])}
+VIP_RULES = config.get('vip_rules', [])
+GENERAL_RULES = sorted(config.get('general_rules', []), key=lambda x: x.get('priority', 50))
 
 # ============================================================================
 # PROCESSOR
@@ -68,17 +71,14 @@ class NordicProcessor:
         self.today_str = datetime.now().strftime('%d.%m.%Y')
 
     def process(self, df):
-        # First, we need to determine the 'difficulty' of each row 
-        # (how many active handlers can take it).
-        # We want to process rows with fewer options first.
+        # 1. Evaluate 'difficulty' (how many active handlers can take each claim)
         rows_with_meta = []
         for idx, row in df.iterrows():
             possible = self._get_possible_handlers_count(row)
             rows_with_meta.append({'idx': idx, 'row': row, 'options': possible})
         
-        # Sort: rows with 1 option first, then 2, etc. 
-        # Rows with 0 options (unmatched) at the end.
-        # This ensures restricted handlers (like for Sweden) get their work first.
+        # 2. Sort: process rows with FEWER options first.
+        # This prevents flexible handlers from taking work that ONLY they can do later.
         rows_with_meta.sort(key=lambda x: (x['options'] == 0, x['options']))
 
         results_map = {}
@@ -86,15 +86,24 @@ class NordicProcessor:
             handler_name, team_name, rid, reason = self._assign(item['row'])
             results_map[item['idx']] = self._build_output(item['row'], handler_name, team_name, rid, reason)
         
-        # Restore original order for the output
+        # 3. Restore original order for output
         results = [results_map[i] for i in range(len(df))]
         output_df = pd.DataFrame(results)
-...
-        output_df = output_df[cols[:insert_idx] + ['Assigned Name', 'Claim Handler', 'Team Name', 'Assignment Reason'] + cols[insert_idx:]]
+        
+        # Column reordering
+        cols = list(output_df.columns)
+        assign_cols = ['Assigned Name', 'Claim Handler', 'Team Name', 'Assignment Reason']
+        for c in assign_cols:
+            if c in cols: cols.remove(c)
+        
+        insert_idx = 0
+        if 'Claimant Name' in cols:
+            insert_idx = cols.index('Claimant Name') + 1
+        
+        output_df = output_df[cols[:insert_idx] + assign_cols + cols[insert_idx:]]
         return output_df
 
     def _get_possible_handlers_count(self, row):
-        """Helper to see how many handlers can take this claim."""
         country = str(row.get('DSV Country (Lookup)', '')).strip()
         division = normalize_division(str(row.get('DSV Division (Lookup)', '')).strip())
         claimant = str(row.get('Claimant Name', '')).strip()
@@ -102,27 +111,23 @@ class NordicProcessor:
         liability = safe_float(row.get('Total liability EUR', 0))
         eff_amt = min(claim_amt, liability) if claim_amt > 0 and liability > 0 else max(claim_amt, liability)
 
-        # VIP Check
         for vip in VIP_RULES:
             if normalize_name_for_match(vip['customer']) in normalize_name_for_match(claimant):
-                if vip['country'] and vip['country'].lower() != country.lower(): continue
-                if eff_amt >= vip['min_amount']:
+                if vip.get('country') and vip['country'].lower() != country.lower(): continue
+                if eff_amt >= vip.get('min_amount', 0):
                     return 1 if vip['handler'] in self.active_handlers else 0
 
-        # General Rules Check
         for rule in GENERAL_RULES:
-            if self._rule_matches(rule, country, division, '', claimant, eff_amt):
+            if self._rule_matches(rule, country, division, claimant, eff_amt):
                 if rule.get('output_assigned') == '#N/A': return 1
                 possible = [h for h in rule.get('handlers', []) if h in self.active_handlers]
                 return len(possible)
-        
         return 0
 
     def _assign(self, row):
         country = str(row.get('DSV Country (Lookup)', '')).strip()
         division = normalize_division(str(row.get('DSV Division (Lookup)', '')).strip())
         claimant = str(row.get('Claimant Name', '')).strip()
-        sub_type = str(row.get('Claim Sub-Type', '')).strip()
         
         claim_amt = safe_float(row.get('Claim amount EUR', 0))
         liability = safe_float(row.get('Total liability EUR', 0))
@@ -131,35 +136,24 @@ class NordicProcessor:
         # 1. VIP Rules
         for vip in VIP_RULES:
             if normalize_name_for_match(vip['customer']) in normalize_name_for_match(claimant):
-                if vip['country'] and vip['country'].lower() != country.lower():
-                    continue
-                if eff_amt >= vip['min_amount']:
+                if vip.get('country') and vip['country'].lower() != country.lower(): continue
+                if eff_amt >= vip.get('min_amount', 0):
                     h_name = vip['handler']
                     if h_name in self.active_handlers:
                         h = HANDLERS[h_name]
                         self.load_counter[h_name] += 1
                         return h_name, h['team'], h['riskonnect_id'], f"VIP: {vip['customer']}"
-                    else:
-                        # VIP handler not present - fallback to general rules? 
-                        # Or maybe assign anyway but mark as absent? 
-                        # Let's fallback to general rules for now.
-                        break
+                    break
 
         # 2. General Rules
         for rule in GENERAL_RULES:
-            if not self._rule_matches(rule, country, division, sub_type, claimant, eff_amt):
-                continue
-            
-            # Static override (e.g. LEGO -> Global #N/A)
+            if not self._rule_matches(rule, country, division, claimant, eff_amt): continue
             if rule.get('output_assigned') == '#N/A':
                 return None, rule.get('output_team', 'Nordic'), '#N/A', f"Rule: {rule['description']}"
 
-            # Pick handler from rule
             possible_handlers = [h for h in rule.get('handlers', []) if h in self.active_handlers]
-            if not possible_handlers:
-                continue # Try next rule if no active handlers for this one
+            if not possible_handlers: continue
 
-            # Equal distribution pick
             selected = min(possible_handlers, key=lambda x: self.load_counter[x])
             self.load_counter[selected] += 1
             h = HANDLERS[selected]
@@ -167,11 +161,9 @@ class NordicProcessor:
 
         return None, 'CHC Nordic', '#N/A', "No matching rule"
 
-    def _rule_matches(self, rule, country, division, sub_type, claimant, eff_amt):
+    def _rule_matches(self, rule, country, division, claimant, eff_amt):
         if rule.get('countries') and country not in rule['countries']: return False
         if rule.get('divisions') and division not in rule['divisions']: return False
-        if rule.get('sub_types'):
-            if not any(s.lower() in sub_type.lower() for s in rule['sub_types']): return False
         if rule.get('customer_contains'):
             if not any(c.lower() in claimant.lower() for c in rule['customer_contains']): return False
         if rule.get('min_amount') is not None and eff_amt < rule['min_amount']: return False
@@ -183,7 +175,6 @@ class NordicProcessor:
         if 'Claim: Claim Number' in r.index:
             r = r.rename({'Claim: Claim Number': 'Claim Import ID'})
         
-        # Date logic
         dol = row.get('Date of Loss')
         if pd.notna(dol):
             try:
@@ -193,7 +184,7 @@ class NordicProcessor:
                 r['Timebar date liable party'] = timebar.strftime('%d.%m.%Y')
             except: pass
 
-        r['Assigned Name'] = rid or '#N/A'
+        r['Assigned Name'] = rid or ''
         r['Claim Handler'] = handler_name or ''
         r['Team Name'] = team_name
         r['Assignment Reason'] = reason
@@ -214,10 +205,9 @@ def main():
 
     with st.sidebar:
         st.header("👥 Lista Obecności")
-        st.info("Zaznacz osoby, które biorą udział w dzisiejszym przydziale.")
+        st.info("Zaznacz osoby z zespołu Nordic.")
         
         active_handlers = []
-        # Group by team
         teams = {}
         for h in HANDLERS.values():
             teams.setdefault(h['team'], []).append(h['name'])
@@ -229,7 +219,6 @@ def main():
                     if st.checkbox(h_name, value=True, key=f"att_{h_name}"):
                         active_handlers.append(h_name)
             else:
-                # Other teams are always active
                 active_handlers.extend(h_names)
 
     if not active_handlers:
@@ -257,10 +246,10 @@ def main():
         st.header("📊 Wyniki")
         
         col1, col2, col3 = st.columns(3)
-        assigned = len(result_df[result_df['Assigned Name'] != '#N/A'])
+        assigned_count = len(result_df[result_df['Claim Handler'] != ''])
         col1.metric("Wszystkie", len(result_df))
-        col2.metric("Przypisane", assigned)
-        col3.metric("Brak dopasowania", len(result_df) - assigned)
+        col2.metric("Przypisane", assigned_count)
+        col3.metric("Brak dopasowania", len(result_df) - assigned_count)
 
         st.subheader("Obciążenie handlerów")
         if stats:
