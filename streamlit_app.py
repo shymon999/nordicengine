@@ -70,8 +70,7 @@ class NordicProcessor:
         self.load_counter = Counter()
         self.today_str = datetime.now().strftime('%d.%m.%Y')
         
-        # Pre-calculate eligibility for each handler across the whole file
-        # This helps in prioritizing 'specialized' handlers over 'flexible' ones
+        # Calculate overall eligibility for the tie-breaker
         self.eligibility_count = Counter()
         for _, row in df.iterrows():
             possible_handlers = self._get_eligible_handlers_for_row(row)
@@ -79,7 +78,6 @@ class NordicProcessor:
                 self.eligibility_count[h] += 1
 
     def _get_eligible_handlers_for_row(self, row):
-        """Returns a list of active handlers that could potentially take this claim."""
         country = str(row.get('DSV Country (Lookup)', '')).strip()
         division = normalize_division(str(row.get('DSV Division (Lookup)', '')).strip())
         claimant = str(row.get('Claimant Name', '')).strip()
@@ -87,7 +85,6 @@ class NordicProcessor:
         liability = safe_float(row.get('Total liability EUR', 0))
         eff_amt = min(claim_amt, liability) if claim_amt > 0 and liability > 0 else max(claim_amt, liability)
 
-        # VIP Check
         for vip in VIP_RULES:
             if normalize_name_for_match(vip['customer']) in normalize_name_for_match(claimant):
                 if vip.get('country') and vip['country'].lower() != country.lower(): continue
@@ -95,30 +92,33 @@ class NordicProcessor:
                     h_name = vip['handler']
                     return [h_name] if h_name in self.active_handlers else []
 
-        # General Rules Check
         for rule in GENERAL_RULES:
             if self._rule_matches(rule, country, division, claimant, eff_amt):
                 if rule.get('output_assigned') == '#N/A': return []
                 return [h for h in rule.get('handlers', []) if h in self.active_handlers]
-        
         return []
 
     def process(self, df):
-        # 1. Evaluate 'difficulty' (how many active handlers can take each claim)
+        # 1. Evaluate 'priority' for each row based on average handler load potential
+        # We want to process rows that compete for busy people FIRST.
         rows_with_meta = []
         for idx, row in df.iterrows():
             possible = self._get_eligible_handlers_for_row(row)
-            rows_with_meta.append({'idx': idx, 'row': row, 'options': len(possible)})
+            if not possible:
+                prio = 0
+            else:
+                prio = sum(self.eligibility_count[h] for h in possible) / len(possible)
+            rows_with_meta.append({'idx': idx, 'row': row, 'priority': prio, 'options': len(possible)})
         
-        # 2. Sort: process rows with FEWER options first (VIPs, then restricted countries)
-        rows_with_meta.sort(key=lambda x: (x['options'] == 0, x['options']))
+        # 2. Sort by Priority DESCENDING (High competition for busy people first)
+        rows_with_meta.sort(key=lambda x: (x['options'] == 0, -x['priority'], x['options']))
 
         results_map = {}
         for item in rows_with_meta:
             handler_name, team_name, rid, reason = self._assign(item['row'])
             results_map[item['idx']] = self._build_output(item['row'], handler_name, team_name, rid, reason)
         
-        # 3. Restore original order
+        # 3. Restore order
         results = [results_map[i] for i in range(len(df))]
         output_df = pd.DataFrame(results)
         
@@ -142,7 +142,7 @@ class NordicProcessor:
         liability = safe_float(row.get('Total liability EUR', 0))
         eff_amt = min(claim_amt, liability) if claim_amt > 0 and liability > 0 else max(claim_amt, liability)
 
-        # 1. VIP Rules
+        # VIP Rules
         for vip in VIP_RULES:
             if normalize_name_for_match(vip['customer']) in normalize_name_for_match(claimant):
                 if vip.get('country') and vip['country'].lower() != country.lower(): continue
@@ -154,7 +154,7 @@ class NordicProcessor:
                         return h_name, h['team'], h['riskonnect_id'], f"VIP: {vip['customer']}"
                     break
 
-        # 2. General Rules
+        # General Rules
         for rule in GENERAL_RULES:
             if not self._rule_matches(rule, country, division, claimant, eff_amt): continue
             if rule.get('output_assigned') == '#N/A':
@@ -163,13 +163,8 @@ class NordicProcessor:
             possible_handlers = [h for h in rule.get('handlers', []) if h in self.active_handlers]
             if not possible_handlers: continue
 
-            # SMART PICK:
-            # 1. Pick handler with minimum current load (load_counter)
-            # 2. Tie-breaker: Pick handler who has FEWER total options in this file (less flexible)
-            #    This saves flexible handlers for claims ONLY they can handle.
-            selected = min(possible_handlers, 
-                           key=lambda x: (self.load_counter[x], self.eligibility_count[x]))
-            
+            # Final balance: current load (primary), then eligibility count (secondary tie-breaker)
+            selected = min(possible_handlers, key=lambda x: (self.load_counter[x], self.eligibility_count[x]))
             self.load_counter[selected] += 1
             h = HANDLERS[selected]
             return selected, rule.get('output_team', h['team']), h['riskonnect_id'], f"Rule: {rule['description']}"
@@ -228,7 +223,7 @@ def main():
             teams.setdefault(h['team'], []).append(h['name'])
         
         for t_name, h_names in teams.items():
-            if t_name == "Nordic":
+            if t_name == "CHC Nordic":
                 st.subheader(t_name)
                 for h_name in sorted(h_names):
                     if st.checkbox(h_name, value=True, key=f"att_{h_name}"):
