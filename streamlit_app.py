@@ -123,6 +123,12 @@ class NordicProcessor:
         output_df = pd.DataFrame(results)
         
         cols = list(output_df.columns)
+        
+        # Remove unwanted columns
+        for col_to_remove in ['Schenker Legacy Claim', 'Claim: Last Modified By', 'Claim ready for AI analysis']:
+            if col_to_remove in cols:
+                cols.remove(col_to_remove)
+
         assign_cols = ['Assigned Name', 'Claim Handler', 'Team Name', 'Assignment Reason']
         for c in assign_cols:
             if c in cols: cols.remove(c)
