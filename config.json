@@ -1,0 +1,245 @@
+{
+  "handlers": [
+    {
+      "name": "Robert Kaczmarczyk",
+      "riskonnect_id": "005Vk00000FyPXa",
+      "team": "Nordic"
+    },
+    {
+      "name": "Karolina Rygorowicz",
+      "riskonnect_id": "005Ts0000025D3n",
+      "team": "Nordic"
+    },
+    {
+      "name": "Weronika Kruszewska",
+      "riskonnect_id": "005Ts0000025Bbc",
+      "team": "Nordic"
+    },
+    {
+      "name": "Amelia Falk",
+      "riskonnect_id": "005Ts00000Dn3y9",
+      "team": "Nordic"
+    },
+    {
+      "name": "Tomasz Wasil",
+      "riskonnect_id": "005Ts00000L4ib3",
+      "team": "Nordic"
+    },
+    {
+      "name": "Michał Sztorc",
+      "riskonnect_id": "005Ts0000025EPZ",
+      "team": "Nordic"
+    },
+    {
+      "name": "Razvan Poenaru",
+      "riskonnect_id": "005Ts00000J4GhZIAV",
+      "team": "Bucharest"
+    },
+    {
+      "name": "Angelic Arellano",
+      "riskonnect_id": "005Ts00000259QA",
+      "team": "Doc Team"
+    },
+    {
+      "name": "Arianne Dimalanta",
+      "riskonnect_id": "005Ts00000259UP",
+      "team": "Doc Team"
+    },
+    {
+      "name": "Szymon Michonski",
+      "riskonnect_id": "005Ts0000025Bbp",
+      "team": "Doc Team"
+    },
+    {
+      "name": "Chris-Ann Bautista",
+      "riskonnect_id": "005Ts000006oQdN",
+      "team": "Doc Team"
+    }
+  ],
+  "vip_rules": [
+    {
+      "customer": "IKEA",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 200
+    },
+    {
+      "customer": "Forbo",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 200
+    },
+    {
+      "customer": "Ahlsell",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 200
+    },
+    {
+      "customer": "Jeld-Wen",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 200
+    },
+    {
+      "customer": "ICA SVERIGE",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 200
+    },
+    {
+      "customer": "Spendrups",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 200
+    },
+    {
+      "customer": "Coop",
+      "country": "Sweden",
+      "handler": "Weronika Kruszewska",
+      "min_amount": 0
+    },
+    {
+      "customer": "ABB ROBOTICS",
+      "country": null,
+      "handler": "Weronika Kruszewska",
+      "min_amount": 0
+    },
+    {
+      "customer": "Postnord",
+      "country": "Sweden",
+      "handler": "Amelia Falk",
+      "min_amount": 200
+    },
+    {
+      "customer": "Power",
+      "country": "Sweden",
+      "handler": "Amelia Falk",
+      "min_amount": 200
+    },
+    {
+      "customer": "Bestseller",
+      "country": "Denmark",
+      "handler": "Karolina Rygorowicz",
+      "min_amount": 500
+    },
+    {
+      "customer": "Dancover",
+      "country": "Denmark",
+      "handler": "Karolina Rygorowicz",
+      "min_amount": 500
+    }
+  ],
+  "general_rules": [
+    {
+      "priority": 5,
+      "description": "DK LEGO -> Global",
+      "countries": ["Denmark"],
+      "customer_contains": ["LEGO"],
+      "output_team": "CHC Global",
+      "output_assigned": "#N/A"
+    },
+    {
+      "priority": 10,
+      "description": "Low Value <200 (DK,EE,LT,LV,NO,FI)",
+      "countries": ["Denmark", "Estonia", "Lithuania", "Latvia", "Norway", "Finland"],
+      "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Total Missing", "Water Damage"],
+      "max_amount": 200,
+      "handlers": ["Angelic Arellano"],
+      "output_team": "CHC Doc Team"
+    },
+    {
+      "priority": 10,
+      "description": "SE Low Value <200",
+      "countries": ["Sweden"],
+      "divisions": ["Road"],
+      "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Total Missing", "Water Damage"],
+      "max_amount": 200,
+      "handlers": ["Arianne Dimalanta"],
+      "output_team": "CHC Doc Team"
+    },
+    {
+      "priority": 15,
+      "description": "Fast Track 200-500 (DK,EE,LT,LV,NO,FI)",
+      "countries": ["Denmark", "Estonia", "Lithuania", "Latvia", "Norway", "Finland"],
+      "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Water Damage"],
+      "min_amount": 200,
+      "max_amount": 500,
+      "handlers": ["Razvan Poenaru"],
+      "output_team": "CHC Bucharest"
+    },
+    {
+      "priority": 30,
+      "description": "DK Road >500",
+      "countries": ["Denmark"],
+      "divisions": ["Road"],
+      "min_amount": 500,
+      "handlers": ["Robert Kaczmarczyk", "Karolina Rygorowicz"]
+    },
+    {
+      "priority": 40,
+      "description": "SE Manco >=200",
+      "countries": ["Sweden"],
+      "sub_types": ["Partial Missing", "Theft", "Total Missing"],
+      "min_amount": 200,
+      "handlers": ["Amelia Falk", "Michał Sztorc", "Tomasz Wasil"]
+    },
+    {
+      "priority": 40,
+      "description": "SE Damage >=200",
+      "countries": ["Sweden"],
+      "divisions": ["Road", "Contract Logistics"],
+      "sub_types": ["Damage", "Delay", "Errors & Omissions", "General Average", "Hidden Damage", "Temperature Damage", "Truck Accident", "Water Damage"],
+      "min_amount": 200,
+      "handlers": ["Amelia Falk", "Michał Sztorc", "Tomasz Wasil", "Weronika Kruszewska"]
+    },
+    {
+      "priority": 50,
+      "description": "DK Solutions",
+      "countries": ["Denmark"],
+      "divisions": ["Solutions"],
+      "handlers": ["Karolina Rygorowicz"]
+    },
+    {
+      "priority": 50,
+      "description": "Norway standard",
+      "countries": ["Norway"],
+      "handlers": ["Amelia Falk"]
+    },
+    {
+      "priority": 50,
+      "description": "EE/LT/LV standard",
+      "countries": ["Estonia", "Lithuania", "Latvia"],
+      "divisions": ["Road", "Solutions", "Contract Logistics"],
+      "sub_types": ["Damage", "Delay", "Errors & Omissions", "General Average", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Total Missing", "Truck Accident", "Water Damage"],
+      "min_amount": 500,
+      "handlers": ["Weronika Kruszewska"]
+    },
+    {
+      "priority": 50,
+      "description": "Finland Road+Solutions",
+      "countries": ["Finland"],
+      "divisions": ["Road", "Solutions"],
+      "sub_types": ["Delay", "Errors & Omissions", "General Average", "Total Missing", "Truck Accident"],
+      "handlers": ["Karolina Rygorowicz"]
+    },
+    {
+      "priority": 50,
+      "description": "SE <200 not low value",
+      "countries": ["Sweden"],
+      "sub_types": ["Delay", "Errors & Omissions", "General Average", "Truck Accident"],
+      "max_amount": 200,
+      "handlers": ["Amelia Falk", "Tomasz Wasil", "Weronika Kruszewska"]
+    },
+    {
+      "priority": 50,
+      "description": "Denmark Total Missing 200-500",
+      "countries": ["Denmark"],
+      "divisions": ["Road", "Solutions"],
+      "sub_types": ["Delay", "Errors & Omissions", "General Average", "Total Missing", "Truck Accident"],
+      "min_amount": 200,
+      "max_amount": 500,
+      "handlers": ["Karolina Rygorowicz", "Robert Kaczmarczyk"]
+    }
+  ]
+}
