@@ -165,8 +165,8 @@
       "sub_types": ["Damage", "Hidden Damage", "Partial Missing", "Temperature Damage", "Theft", "Water Damage"],
       "min_amount": 200,
       "max_amount": 500,
-      "handlers": ["Razvan Poenaru"],
-      "output_team": "CHC Bucharest"
+      "output_team": "CHC Bucharest",
+      "output_assigned": ""
     },
     {
       "priority": 30,

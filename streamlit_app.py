@@ -193,10 +193,14 @@ def main():
             teams.setdefault(h['team'], []).append(h['name'])
         
         for t_name, h_names in teams.items():
-            st.subheader(t_name)
-            for h_name in sorted(h_names):
-                if st.checkbox(h_name, value=True, key=f"att_{h_name}"):
-                    active_handlers.append(h_name)
+            if t_name == "Nordic":
+                st.subheader(t_name)
+                for h_name in sorted(h_names):
+                    if st.checkbox(h_name, value=True, key=f"att_{h_name}"):
+                        active_handlers.append(h_name)
+            else:
+                # Other teams are always active
+                active_handlers.extend(h_names)
 
     if not active_handlers:
         st.warning("⚠️ Proszę zaznaczyć przynajmniej jedną osobę na liście obecności.")
