@@ -68,24 +68,55 @@ class NordicProcessor:
         self.today_str = datetime.now().strftime('%d.%m.%Y')
 
     def process(self, df):
-        results = []
-        for _, row in df.iterrows():
-            handler_name, team_name, rid, reason = self._assign(row)
-            results.append(self._build_output(row, handler_name, team_name, rid, reason))
+        # First, we need to determine the 'difficulty' of each row 
+        # (how many active handlers can take it).
+        # We want to process rows with fewer options first.
+        rows_with_meta = []
+        for idx, row in df.iterrows():
+            possible = self._get_possible_handlers_count(row)
+            rows_with_meta.append({'idx': idx, 'row': row, 'options': possible})
         
+        # Sort: rows with 1 option first, then 2, etc. 
+        # Rows with 0 options (unmatched) at the end.
+        # This ensures restricted handlers (like for Sweden) get their work first.
+        rows_with_meta.sort(key=lambda x: (x['options'] == 0, x['options']))
+
+        results_map = {}
+        for item in rows_with_meta:
+            handler_name, team_name, rid, reason = self._assign(item['row'])
+            results_map[item['idx']] = self._build_output(item['row'], handler_name, team_name, rid, reason)
+        
+        # Restore original order for the output
+        results = [results_map[i] for i in range(len(df))]
         output_df = pd.DataFrame(results)
-        
-        # Reorder columns to have assignment info prominently
-        cols = list(output_df.columns)
-        for c in ['Assigned Name', 'Claim Handler', 'Team Name', 'Assignment Reason']:
-            if c in cols: cols.remove(c)
-        
-        insert_idx = 0
-        if 'Claimant Name' in cols:
-            insert_idx = cols.index('Claimant Name') + 1
-        
+...
         output_df = output_df[cols[:insert_idx] + ['Assigned Name', 'Claim Handler', 'Team Name', 'Assignment Reason'] + cols[insert_idx:]]
         return output_df
+
+    def _get_possible_handlers_count(self, row):
+        """Helper to see how many handlers can take this claim."""
+        country = str(row.get('DSV Country (Lookup)', '')).strip()
+        division = normalize_division(str(row.get('DSV Division (Lookup)', '')).strip())
+        claimant = str(row.get('Claimant Name', '')).strip()
+        claim_amt = safe_float(row.get('Claim amount EUR', 0))
+        liability = safe_float(row.get('Total liability EUR', 0))
+        eff_amt = min(claim_amt, liability) if claim_amt > 0 and liability > 0 else max(claim_amt, liability)
+
+        # VIP Check
+        for vip in VIP_RULES:
+            if normalize_name_for_match(vip['customer']) in normalize_name_for_match(claimant):
+                if vip['country'] and vip['country'].lower() != country.lower(): continue
+                if eff_amt >= vip['min_amount']:
+                    return 1 if vip['handler'] in self.active_handlers else 0
+
+        # General Rules Check
+        for rule in GENERAL_RULES:
+            if self._rule_matches(rule, country, division, '', claimant, eff_amt):
+                if rule.get('output_assigned') == '#N/A': return 1
+                possible = [h for h in rule.get('handlers', []) if h in self.active_handlers]
+                return len(possible)
+        
+        return 0
 
     def _assign(self, row):
         country = str(row.get('DSV Country (Lookup)', '')).strip()
